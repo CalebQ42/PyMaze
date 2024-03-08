@@ -1,4 +1,6 @@
 import time
+import random
+
 from tkinter import Canvas, Tk
 
 class TkWindow:
@@ -12,14 +14,14 @@ class TkWindow:
         self.win.call('tk', 'scaling', 5.0)
         self.__canvas = Canvas(background="black")
         self.__canvas.pack()
-        self.update_window()
+        self.update()
 
     def open_and_wait(self):
         while self.show:
-            self.update_window()
+            self.update()
         self.win.destroy()
 
-    def update_window(self):
+    def update(self):
         self.win.update_idletasks()
         self.win.update()
 
@@ -70,6 +72,18 @@ class Cell:
             self.left
         )
 
+    def can_remove_walls(self):
+        num_walls = 0
+        if self.top:
+            num_walls += 1
+        if self.right:
+            num_walls += 1
+        if self.bottom:
+            num_walls += 1
+        if self.left:
+            num_walls += 1
+        return num_walls > 2
+
     def __draw_line(self, line, exists):
         if exists:
             self.__win.draw_line(line, "white")
@@ -77,20 +91,22 @@ class Cell:
             self.__win.draw_line(line, "black")
 
 class Maze:
-    def __init__(self, x, y, rows, cols, win, cell_size=50):
+    def __init__(self, x, y, rows, cols, win, cell_size=50, seed=None):
         self.x = x
         self.y = y
         self.rows = rows
         self.cols = cols
         self.cell_size = cell_size
         self.win = win
+        self.seed = seed
         self.__create_cells()
+        self.__create_maze()
 
     def __create_cells(self):
         self.cells = []
-        prev = 0
+        start_x, start_y = 0, 0
         x, y = 0, 0
-        while x < self.rows or y < self.cols:
+        while start_x < self.rows and start_y < self.cols:
             if x >= len(self.cells):
                 self.cells.append([])
             self.cells[x].append(
@@ -98,31 +114,26 @@ class Maze:
                     self.x+(self.cell_size*x), self.y+(self.cell_size*y), self.win, self.cell_size
                 )
             )
-            print(x, y)
-            print(len(self.cells), len(self.cells[x]))
             self.cells[x][y].draw()
-            self.win.update_window()
+            self.win.update()
             time.sleep(0.05)
-            if prev <= self.cols:
-                if y <= 0:
-                    prev += 1
-                    x = 0
-                    y = prev
-                    continue
-            else:
-                if x >= self.row:
-                    prev += 1
-                    x = prev - self.cols
-                    y = self.rows - 1
-                    continue
             x += 1
             y -= 1
-        print("YO")
+            if y < 0 or x >= self.rows:
+                if start_y >= self.cols-1:
+                    start_x += 1
+                else:
+                    start_y += 1
+                x = start_x
+                y = start_y
 
-    def __is_init(self, x, y):
-        if x >= len(self.cells):
-            return False
-        return y < len(self.cells[x])
+    def __create_maze(self):
+        self.cells[0][0].top = False
+        self.cells[self.rows-1][self.cols-1].bottom = False
+        self.cells[0][0].draw()
+        self.cells[self.rows-1][self.cols-1].draw()
+        if self.seed:
+            random.seed = self.seed
 
 def main():
     win = TkWindow()
