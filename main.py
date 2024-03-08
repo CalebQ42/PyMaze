@@ -39,7 +39,7 @@ class Line:
         self.y_2 = y_2
 
 class Cell:
-    def __init__(self, x, y, win, size=50):
+    def __init__(self, x, y, win=None, size=50):
         self.x = x
         self.y = y
         self.__win = win
@@ -85,13 +85,15 @@ class Cell:
         return num_walls > 2
 
     def __draw_line(self, line, exists):
+        if not self.__win:
+            return
         if exists:
             self.__win.draw_line(line, "white")
         else:
             self.__win.draw_line(line, "black")
 
 class Maze:
-    def __init__(self, x, y, rows, cols, win, cell_size=50, seed=None):
+    def __init__(self, x, y, rows, cols, win=None, cell_size=50, seed=None):
         self.x = x
         self.y = y
         self.rows = rows
@@ -106,7 +108,8 @@ class Maze:
         self.cells = []
         start_x, start_y = 0, 0
         x, y = 0, 0
-        while start_x < self.rows and start_y < self.cols:
+        while start_x < self.cols and start_y < self.rows:
+            print(x, y)
             if x >= len(self.cells):
                 self.cells.append([])
             self.cells[x].append(
@@ -114,13 +117,14 @@ class Maze:
                     self.x+(self.cell_size*x), self.y+(self.cell_size*y), self.win, self.cell_size
                 )
             )
-            self.cells[x][y].draw()
-            self.win.update()
-            time.sleep(0.05)
+            if self.win:
+                self.cells[x][y].draw()
+                self.win.update()
+                time.sleep(0.05)
             x += 1
             y -= 1
-            if y < 0 or x >= self.rows:
-                if start_y >= self.cols-1:
+            if y < 0 or x >= self.cols:
+                if start_y >= self.rows-1:
                     start_x += 1
                 else:
                     start_y += 1
@@ -129,15 +133,90 @@ class Maze:
 
     def __create_maze(self):
         self.cells[0][0].top = False
-        self.cells[self.rows-1][self.cols-1].bottom = False
+        self.cells[self.cols-1][self.rows-1].bottom = False
         self.cells[0][0].draw()
-        self.cells[self.rows-1][self.cols-1].draw()
+        self.cells[self.cols-1][self.rows-1].draw()
         if self.seed:
             random.seed = self.seed
+        self.__create_path(0, 0)
+        self.__reset_visited()
+    
+    def __create_path(self, x, y):
+        cell = self.cells[x][y]
+        cell.visited = True
+        possible = []
+        if y > 0 and not self.cells[x][y-1].visited: # up
+            possible.append(0)
+        if x < self.cols-1 and not self.cells[x+1][y].visited: # right
+            possible.append(1)
+        if y < self.rows-1 and not self.cells[x][y+1].visited: # down
+            possible.append(2)
+        if x > 0 and not self.cells[x-1][y].visited: # left
+            possible.append(3)
+        if not possible:
+            return
+        while possible:
+            rand = random.randint(0, len(possible)-1)
+            move = possible[rand]
+            possible.remove(move)
+            if move == 0:
+                move_to = self.cells[x][y-1]
+                if move_to.visited:
+                    continue
+                cell.top = False
+                move_to.bottom = False
+                if self.win:
+                    cell.draw()
+                    move_to.draw()
+                    self.win.update()
+                    time.sleep(0.05)
+                self.__create_path(x, y-1)
+            elif move == 1:
+                move_to = self.cells[x+1][y]
+                if move_to.visited:
+                    continue
+                cell.right = False
+                move_to.left = False
+                if self.win:
+                    cell.draw()
+                    move_to.draw()
+                    self.win.update()
+                    time.sleep(0.05)
+                self.__create_path(x+1, y)
+            elif move == 2:
+                move_to = self.cells[x][y+1]
+                if move_to.visited:
+                    continue
+                cell.bottom = False
+                move_to.top = False
+                if self.win:
+                    cell.draw()
+                    move_to.draw()
+                    self.win.update()
+                    time.sleep(0.05)
+                self.__create_path(x, y+1)
+            else:
+                move_to = self.cells[x-1][y]
+                if move_to.visited:
+                    continue
+                cell.left = False
+                move_to.right = False
+                if self.win:
+                    cell.draw()
+                    move_to.draw()
+                    self.win.update()
+                    time.sleep(0.05)
+                self.__create_path(x-1, y)
+
+    def __reset_visited(self):
+        for x in self.cells:
+            for c in x:
+                c.visisted = False
 
 def main():
     win = TkWindow()
     mz = Maze(25, 25, 10, 10, win)
     win.open_and_wait()
 
-main()
+if __name__ == "__main__":
+    main()
