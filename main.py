@@ -1,3 +1,4 @@
+import sys
 import time
 import random
 
@@ -9,10 +10,11 @@ class TkWindow:
         self.height = height
         self.show = True
         self.win = Tk()
+        self.win.geometry(f"={width}x{height}")
         self.win.title(title)
         self.win.protocol("WM_DELETE_WINDOW", self.close)
         self.win.call('tk', 'scaling', 5.0)
-        self.__canvas = Canvas(background="black")
+        self.__canvas = Canvas(background="black", height=height, width=width)
         self.__canvas.pack()
         self.update()
 
@@ -109,7 +111,6 @@ class Maze:
         start_x, start_y = 0, 0
         x, y = 0, 0
         while start_x < self.cols and start_y < self.rows:
-            print(x, y)
             if x >= len(self.cells):
                 self.cells.append([])
             self.cells[x].append(
@@ -120,7 +121,7 @@ class Maze:
             if self.win:
                 self.cells[x][y].draw()
                 self.win.update()
-                time.sleep(0.05)
+                time.sleep(0.01)
             x += 1
             y -= 1
             if y < 0 or x >= self.cols:
@@ -139,7 +140,6 @@ class Maze:
         if self.seed:
             random.seed = self.seed
         self.__create_path(0, 0)
-        self.__reset_visited()
     
     def __create_path(self, x, y):
         cell = self.cells[x][y]
@@ -169,7 +169,7 @@ class Maze:
                     cell.draw()
                     move_to.draw()
                     self.win.update()
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                 self.__create_path(x, y-1)
             elif move == 1:
                 move_to = self.cells[x+1][y]
@@ -181,7 +181,7 @@ class Maze:
                     cell.draw()
                     move_to.draw()
                     self.win.update()
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                 self.__create_path(x+1, y)
             elif move == 2:
                 move_to = self.cells[x][y+1]
@@ -193,7 +193,7 @@ class Maze:
                     cell.draw()
                     move_to.draw()
                     self.win.update()
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                 self.__create_path(x, y+1)
             else:
                 move_to = self.cells[x-1][y]
@@ -205,17 +205,67 @@ class Maze:
                     cell.draw()
                     move_to.draw()
                     self.win.update()
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                 self.__create_path(x-1, y)
 
     def __reset_visited(self):
-        for x in self.cells:
-            for c in x:
-                c.visisted = False
+        for row in self.cells:
+            for c in row:
+                c.visited = False
+
+    def solve(self):
+        self.__reset_visited()
+        return self.__solve_actual(0, 0)
+
+    def __solve_actual(self, x, y):
+        if x == self.cols-1 and y == self.rows-1:
+            return True
+        cur = self.cells[x][y]
+        cur.visited = True
+        dirs = []
+        if not cur.bottom: #down
+            dirs.append((x, y+1))
+        if not cur.right: #right
+            dirs.append((x+1, y))
+        if not cur.left: #left
+            dirs.append((x-1, y))
+        if not cur.top and not (x == 0 and y == 0): #up
+            dirs.append((x, y-1))
+        for d in dirs:
+            to = self.cells[d[0]][d[1]]
+            if to.visited:
+                continue
+            if self.win:
+                self.__paint_solve_path(cur, to)
+                self.win.update()
+                time.sleep(0.05)
+            res = self.__solve_actual(d[0], d[1])
+            if res:
+                return True
+            if self.win:
+                self.__paint_solve_path(cur, to)
+                self.win.update()
+                time.sleep(0.05)
+        return False
+        
+
+    def __paint_solve_path(self, cur, to):
+        if not self.win:
+            return
+        color = "red"
+        if to.visited:
+            color = "gray"
+        self.win.draw_line(
+            Line(
+                cur.x + cur.size//2, cur.y + cur.size//2, to.x + cur.size//2, to.y + cur.size//2
+            ), color=color
+        )
 
 def main():
-    win = TkWindow()
-    mz = Maze(25, 25, 10, 10, win)
+    win = TkWindow(width=1550, height=1550)
+    sys.setrecursionlimit(5000)
+    mz = Maze(25, 25, 50, 50, win, cell_size=30)
+    mz.solve()
     win.open_and_wait()
 
 if __name__ == "__main__":

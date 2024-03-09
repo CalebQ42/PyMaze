@@ -15,6 +15,12 @@ class Tests(unittest.TestCase):
             len(m1.cells[0]),
             num_rows,
         )
-
+        for x in range(0, len(m1.cells)):
+            for y in range(0, len(m1.cells[x])):
+                self.assertFalse(
+                    m1.cells[x][y].visited,
+                    f"{x} {y} is visited, but shouldn't be"
+                )
+                
 if __name__ == "__main__":
     unittest.main()
